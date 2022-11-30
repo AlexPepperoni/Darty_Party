@@ -4,20 +4,21 @@ using UnityEngine;
 
 public class Dart1 : MonoBehaviour
 {
-    //[SerializeField] private Transform groundCheckTransform = null;
+    [SerializeField] private HurtBox boardPart;
     [SerializeField] private LayerMask playerMask;
+    private Vector3 rotationAngle = new Vector3(0, 0, 0);
+    private Rigidbody rigidbodyComponent;
+    private float horizontalInput;
     private bool jumpKeyWasPressed;
     private bool suspendDart = false;
-    private float horizontalInput;
-    public float downTime, upTime, dartPower, missTime;
-    private Rigidbody rigidbodyComponent;
-    //private bool paused = false;
     private bool throwingStage = true;
     private bool ready = false;
     private bool timeChecker = false;
-    private Vector3 rotationAngle = new Vector3(0, 0, 0);
+
+    public float downTime, upTime, dartPower, missTime;
     public float totalPoints = 300;
-    [SerializeField] private HurtBox boardPart;
+    public int displayedPower = 0;
+
 
     // Triggers on connection with dart board
     private void OnTriggerEnter(Collider other)
@@ -62,6 +63,11 @@ public class Dart1 : MonoBehaviour
         {
             downTime = Time.time;
             ready = true;
+        }
+        if (Input.GetKey(KeyCode.Space) && Time.time - downTime < 2.5f && ready && throwingStage) 
+        {
+            Debug.Log((Time.time - downTime).ToString("00:00.00"));
+            displayedPower = (int)((Time.time - downTime)*40);
         }
 
         if (Input.GetKeyUp(KeyCode.Space) && ready)
@@ -154,10 +160,10 @@ public class Dart1 : MonoBehaviour
     IEnumerator Waiting()
     {
         yield return new WaitForSeconds(1);
-        //Debug.Log("Dart reset rotation");
         rotationAngle = new Vector3(0, 0, 0);
-        //Debug.Log("Dart reset position");
+        transform.eulerAngles = rotationAngle;
         rigidbodyComponent.position = new Vector3(0, 0, 0);
+        displayedPower = 0;
         throwingStage = true;
     }
 }
