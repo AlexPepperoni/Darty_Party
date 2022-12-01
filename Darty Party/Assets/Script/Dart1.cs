@@ -6,6 +6,8 @@ public class Dart1 : MonoBehaviour
 {
     [SerializeField] private HurtBox boardPart;
     [SerializeField] private LayerMask playerMask;
+    [SerializeField] private Dart1 enemyPlayer;
+
     private Vector3 rotationAngle = new Vector3(0, 0, 0);
     private Rigidbody rigidbodyComponent;
     private float horizontalInput;
@@ -18,34 +20,13 @@ public class Dart1 : MonoBehaviour
     public float downTime, upTime, dartPower, missTime;
     public float totalPoints = 300;
     public int displayedPower = 0;
+    public bool turn = true;
 
 
     // Triggers on connection with dart board
     private void OnTriggerEnter(Collider other)
     {
         suspendDart = true;
-    }
-
-    // Update the score depending on the board part
-    public void pointChanger(float point)
-    {
-        float temp = totalPoints - point;
-        // Check if the score equal to 0 then finish
-        if (temp == 0)
-        {
-            totalPoints = temp;
-            Debug.Log("Dart POINTS updated");
-            
-        } 
-        else if (temp < 0) // Check if the score is less than 0 then bust
-        {
-            Debug.Log("Dart POINTS not updated");
-        }
-        else // Else update the score
-        {
-            totalPoints = temp;
-            Debug.Log("Dart POINTS updated");
-        } 
     }
 
     // Start is called before the first frame update
@@ -57,7 +38,7 @@ public class Dart1 : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-
+        if(turn) {
         // Checkings for all keys and implements their functions
         if (Input.GetKeyDown(KeyCode.Space) && !ready && throwingStage)
         {
@@ -87,7 +68,7 @@ public class Dart1 : MonoBehaviour
         {
             if (rotationAngle.y  < 50f)
             {
-                rotationAngle += new Vector3(0, 5, 0);
+                rotationAngle += new Vector3(0, 2.5f, 0);
                 transform.eulerAngles = rotationAngle;
             }
         }
@@ -96,7 +77,7 @@ public class Dart1 : MonoBehaviour
         {
             if (rotationAngle.y > -50f)
             {
-                rotationAngle += new Vector3(0, -5, 0);
+                rotationAngle += new Vector3(0, -2.5f, 0);
                 transform.eulerAngles = rotationAngle;
             }
         }
@@ -105,7 +86,7 @@ public class Dart1 : MonoBehaviour
         {
             if (rotationAngle.x < 30f)
             {
-                rotationAngle += new Vector3(5, 0, 0);
+                rotationAngle += new Vector3(2.5f, 0, 0);
                 transform.eulerAngles = rotationAngle;
             }
         }
@@ -114,46 +95,81 @@ public class Dart1 : MonoBehaviour
         {
             if (rotationAngle.x > -30f)
             {
-                rotationAngle += new Vector3(-5, 0, 0);
+                rotationAngle += new Vector3(-2.5f, 0, 0);
                 transform.eulerAngles = rotationAngle;
             }
         }
         horizontalInput = Input.GetAxis("Horizontal");
+        }
     }
 
     private void FixedUpdate()
     { 
-        // Throwing dart
-        if (jumpKeyWasPressed)
-        {
-            rigidbodyComponent.useGravity = true;
-            rigidbodyComponent.AddRelativeForce(Vector3.forward * dartPower, ForceMode.Force);
-            missTime = Time.time;
-            jumpKeyWasPressed = false;
-            throwingStage = false;
-            timeChecker = true;
-        }
+        if(isTurn()){ 
 
-        // Checks to see how long it has been since dart thrown, resets if missed.
-        if(timeChecker)
-        { 
-            if (((Time.time) - missTime) > 4)
+            // Throwing dart
+            if (jumpKeyWasPressed)
             {
-                suspendDart = true;
-                timeChecker = false;
+                rigidbodyComponent.useGravity = true;
+                rigidbodyComponent.AddRelativeForce(Vector3.forward * dartPower, ForceMode.Force);
+                missTime = Time.time;
+                jumpKeyWasPressed = false;
+                throwingStage = false;
+                timeChecker = true;
+            }
+
+            // Checks to see how long it has been since dart thrown, resets if missed.
+            if(timeChecker)
+            { 
+                if (((Time.time) - missTime) > 4)
+                {
+                    suspendDart = true;
+                    timeChecker = false;
+                }
+            }
+
+            // Makes dart stick, also resets dart.
+            if (suspendDart)
+            {
+                rigidbodyComponent.useGravity = false;
+                jumpKeyWasPressed = false;
+                rigidbodyComponent.isKinematic = true;
+                StartCoroutine(Waiting());
+                suspendDart = false;
+                rigidbodyComponent.isKinematic = false;
             }
         }
-
-        // Makes dart stick, also resets dart.
-        if (suspendDart)
+        else
         {
-            rigidbodyComponent.useGravity = false;
-            jumpKeyWasPressed = false;
-            rigidbodyComponent.isKinematic = true;
-            StartCoroutine(Waiting());
-            suspendDart = false;
-            rigidbodyComponent.isKinematic = false;
+            StartCoroutine(TurnWaiting());
         }
+    }
+
+    // Public class for checking which instance's turn it is
+    public bool isTurn() {
+        return turn;
+    }
+
+    // Update the score depending on the board part
+    public void pointChanger(float point)
+    {
+        float temp = totalPoints - point;
+        // Check if the score equal to 0 then finish
+        if (temp == 0)
+        {
+            totalPoints = temp;
+            Debug.Log("Dart POINTS updated");
+            
+        } 
+        else if (temp < 0) // Check if the score is less than 0 then bust
+        {
+            Debug.Log("Dart POINTS not updated");
+        }
+        else // Else update the score
+        {
+            totalPoints = temp;
+            Debug.Log("Dart POINTS updated");
+        } 
     }
 
     // Waits for a second to show user where dart hit, then resets position.
@@ -165,5 +181,20 @@ public class Dart1 : MonoBehaviour
         rigidbodyComponent.position = new Vector3(0, 0, 0);
         displayedPower = 0;
         throwingStage = true;
+        turn = false;
+    }
+
+    IEnumerator TurnWaiting()
+    {
+        rigidbodyComponent.position = new Vector3(110, 110, 110);
+        while(enemyPlayer.isTurn()) {
+            yield return new WaitForSeconds(0);
+        }
+        rotationAngle = new Vector3(0, 0, 0);
+        rigidbodyComponent.position = new Vector3(0, 0, 0);
+        //missTime = Time.time;
+        timeChecker = false;
+        suspendDart = false;
+        turn = true;
     }
 }
